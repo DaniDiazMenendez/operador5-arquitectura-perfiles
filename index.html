@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a0e17" />
+    <meta name="description" content="Operador 5.0: arquitectura de referencia Microsoft Cloud y perfiles del sistema en una copia independiente de la presentación original." />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <title>Operador 5.0 · Arquitectura y perfiles</title>
+  </head>
+  <body>
+    <div id="app">
+      <div id="base">
+        <canvas id="scene" aria-hidden="true"></canvas>
+        <header id="topbar">
+          <div class="brand">
+            <span class="brand-mark" aria-hidden="true">O5</span>
+            <div class="brand-text">
+              <h1>Operador 5.0</h1>
+              <small>Arquitectura y perfiles · Microsoft Cloud</small>
+            </div>
+          </div>
+          <nav class="top-actions" aria-label="Explorar la presentación">
+            <button id="btn-arch">🗺️ Arquitectura completa</button>
+            <button id="btn-profiles">👥 Perfiles</button>
+            <button id="btn-overview">⤢ Vista de la planta</button>
+          </nav>
+        </header>
+        <aside id="explore-note">
+          <strong>Una planta. Su arquitectura. Cada rol.</strong>
+          <p>Explorá las capas técnicas y los permisos propuestos para cada perfil.</p>
+          <span id="scene-status" role="status">Preparando la planta 3D…</span>
+          <div class="variant-disclosure">Arquitectura de referencia · Sin servicios conectados</div>
+          <div class="note-actions">
+            <button id="btn-motion" type="button" aria-pressed="false" disabled>Pausar animación</button>
+            <a href="https://danidiazmenendez.github.io/catalogo-demos-ia-v2/" target="_blank" rel="noopener noreferrer">Volver al catálogo ↗</a>
+          </div>
+        </aside>
+      </div>
+
+      <section id="arch-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="arch-title" tabindex="-1">
+        <div class="arch-modal">
+          <button id="arch-close" aria-label="Cerrar arquitectura">×</button>
+          <h2 id="arch-title">Arquitectura completa de Operador 5.0</h2>
+          <p>Capas y componentes de referencia. Representan un diseño propuesto, no servicios conectados.</p>
+          <div id="arch-grid"></div>
+        </div>
+      </section>
+
+      <section id="profiles-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="profiles-title" tabindex="-1">
+        <div class="arch-modal profiles-modal">
+          <button id="profiles-close" aria-label="Cerrar perfiles">×</button>
+          <h2 id="profiles-title">Perfiles del sistema</h2>
+          <p>Canal, identidad, alcance y permisos propuestos para cada rol. Son perfiles ilustrativos, no usuarios reales ni una autenticación implementada.</p>
+          <div id="profiles-grid"></div>
+        </div>
+      </section>
+      <p id="app-error" role="alert" hidden></p>
+    </div>
+    <noscript><p class="no-script">Activá JavaScript para explorar la arquitectura y los perfiles. Esta presentación no se conecta a servicios ni contiene datos de usuarios reales.</p></noscript>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
