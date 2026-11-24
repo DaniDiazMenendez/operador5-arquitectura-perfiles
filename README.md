@@ -1,12 +1,8 @@
-# Operador 5.0 · Arquitectura y perfiles
+# Planta Conectada · Arquitectura y perfiles
 
-Copia independiente de la presentación de Operador 5.0. Conserva su planta 3D procedural, estética oscura y naranja, diez capas de arquitectura de referencia y seis perfiles funcionales: operación, enfermería, seguridad, contratista, coordinación y portería.
-
-La aplicación original se conserva sin modificaciones. Esta copia tiene repositorio e historial propios: no publica el historial del proyecto de origen.
+Una planta industrial en 3D para explorar el trabajo del operador, los roles y permisos del equipo y su arquitectura de referencia con Microsoft Cloud, IA y datos. Incluye diez capas de arquitectura y seis perfiles funcionales: operación, enfermería, seguridad, contratista, coordinación y portería.
 
 ## Alcance
-
-Se retiraron el mockup y sus imágenes, la introducción biométrica, el recorrido de un turno, sus pasos, las conversaciones simuladas y las variantes que incluían ese recorrido. Los perfiles no tienen miniaturas ni accesos a pantallas. Los nombres personales se generalizaron y no se presenta la situación de un contratista concreto.
 
 La vista inicial muestra al operador en la planta sosteniendo una tablet 3D con pantalla neutra: el dispositivo no tiene capturas, texturas de la app ni contenido interactivo. «Planta» permite volver al conjunto.
 

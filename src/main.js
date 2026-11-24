@@ -58,7 +58,7 @@ function openArchitecture(layerId = null) {
 
 function setView(mode) {
   const descriptions = {
-    operador: ["Operador en planta, con su tablet.", "Dispositivo 3D con pantalla neutra. Sin imágenes ni pantallas de la app."],
+    operador: ["Operador en planta, con su tablet.", "Explorá los perfiles del equipo, sus permisos y la arquitectura Microsoft para digitalizar el trabajo en planta."],
     planta: ["Una planta. Su arquitectura. Cada rol.", "Explorá la planta, los perfiles y sus permisos propuestos."],
     arquitectura: ["Arquitectura conectada sobre la planta.", "Flujos ilustrativos del diseño Microsoft. Tocá una capa para ver sus componentes."]
   };
