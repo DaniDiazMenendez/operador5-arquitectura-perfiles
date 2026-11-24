@@ -56,9 +56,26 @@ function openArchitecture(layerId = null) {
   openOverlay("arch-overlay", layerId ? `[data-architecture="${layerId}"]` : null);
 }
 
+function setView(mode) {
+  const descriptions = {
+    operador: ["Operador en planta, con su tablet.", "Dispositivo 3D con pantalla neutra. Sin imágenes ni pantallas de la app."],
+    planta: ["Una planta. Su arquitectura. Cada rol.", "Explorá la planta, los perfiles y sus permisos propuestos."],
+    arquitectura: ["Arquitectura conectada sobre la planta.", "Flujos ilustrativos del diseño Microsoft. Tocá una capa para ver sus componentes."]
+  };
+  $("app").dataset.view = mode;
+  $("view-title").textContent = descriptions[mode][0];
+  $("view-description").textContent = descriptions[mode][1];
+  for (const [button, view] of [["btn-operator", "operador"], ["btn-overview", "planta"], ["btn-spatial", "arquitectura"]]) {
+    $(button).setAttribute("aria-pressed", String(view === mode));
+  }
+}
+
 $("btn-profiles").addEventListener("click", () => openProfiles());
 $("btn-arch").addEventListener("click", () => openArchitecture());
 $("btn-overview").addEventListener("click", () => plant?.overview());
+$("btn-operator").addEventListener("click", () => plant?.locate("brisa"));
+$("btn-spatial").addEventListener("click", () => plant?.showArchitecture());
+$("btn-runtime").addEventListener("click", () => openOverlay("runtime-overlay"));
 $("btn-motion").addEventListener("click", () => {
   motionPaused = !motionPaused;
   plant.setMotionPaused(motionPaused);
@@ -67,7 +84,8 @@ $("btn-motion").addEventListener("click", () => {
 });
 $("profiles-close").addEventListener("click", () => closeOverlay());
 $("arch-close").addEventListener("click", () => closeOverlay());
-for (const id of ["arch-overlay", "profiles-overlay"]) {
+$("runtime-close").addEventListener("click", () => closeOverlay());
+for (const id of ["arch-overlay", "profiles-overlay", "runtime-overlay"]) {
   $(id).addEventListener("click", event => {
     if (event.target === $(id)) closeOverlay();
   });
@@ -107,20 +125,30 @@ document.addEventListener("keydown", event => {
 const query = new URLSearchParams(location.search);
 if (query.has("perfiles")) openProfiles(query.get("perfiles"));
 else if (query.has("arquitectura")) openArchitecture(query.get("arquitectura"));
+else if (query.has("tecnica")) openOverlay("runtime-overlay");
 
 import("./scene.js").then(({ createPlantScene }) => {
   plant = createPlantScene({
     canvas: $("scene"),
     labelsMount: $("base"),
     onProfile: openProfiles,
+    onLayer: openArchitecture,
+    onViewChange: setView,
     onContextLost: () => {
       $("scene-status").textContent = "La vista 3D perdió su contexto. Recargá para volver a intentar; arquitectura y perfiles siguen disponibles.";
       $("btn-overview").disabled = true;
       $("btn-motion").disabled = true;
+      $("btn-spatial").disabled = true;
+      $("btn-operator").disabled = true;
     }
   });
   plant.setPaused(Boolean(activeOverlay));
   $("btn-motion").disabled = false;
+  $("btn-spatial").disabled = false;
+  $("btn-operator").disabled = false;
+  $("btn-overview").disabled = false;
+  if (query.get("vista") === "arquitectura3d") plant.showArchitecture();
+  else if (query.get("vista") === "planta") plant.overview();
   $("scene-status").textContent = "Arrastrá para rotar · rueda para acercar · tocá un perfil para explorarlo.";
 }).catch(error => {
   console.error("No se pudo iniciar la planta 3D:", error);

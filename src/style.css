@@ -158,7 +158,8 @@ body {
 
 /* ---------- Overlay arquitectura completa ---------- */
 #arch-overlay,
-#profiles-overlay {
+#profiles-overlay,
+#runtime-overlay {
   position: absolute;
   inset: 0;
   z-index: 40;
@@ -170,7 +171,8 @@ body {
   padding: 30px;
 }
 #arch-overlay.hidden,
-#profiles-overlay.hidden {
+#profiles-overlay.hidden,
+#runtime-overlay.hidden {
   display: none;
 }
 .arch-modal {
@@ -192,7 +194,8 @@ body {
   color: var(--muted);
 }
 #arch-close,
-#profiles-close {
+#profiles-close,
+#runtime-close {
   position: absolute;
   top: 14px;
   right: 18px;

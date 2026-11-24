@@ -21,14 +21,17 @@
             </div>
           </div>
           <nav class="top-actions" aria-label="Explorar la presentación">
-            <button id="btn-arch">🗺️ Arquitectura completa</button>
+            <button id="btn-operator" aria-pressed="true" disabled>👷 Operador + tablet</button>
+            <button id="btn-overview" aria-pressed="false" disabled>⤢ Planta</button>
+            <button id="btn-spatial" aria-pressed="false" disabled>🛰️ Arquitectura 3D</button>
+            <button id="btn-arch">🗺️ Capas técnicas</button>
+            <button id="btn-runtime">Cómo funciona</button>
             <button id="btn-profiles">👥 Perfiles</button>
-            <button id="btn-overview">⤢ Vista de la planta</button>
           </nav>
         </header>
         <aside id="explore-note">
-          <strong>Una planta. Su arquitectura. Cada rol.</strong>
-          <p>Explorá las capas técnicas y los permisos propuestos para cada perfil.</p>
+          <strong id="view-title">Operador en planta, con su tablet.</strong>
+          <p id="view-description">Dispositivo 3D con pantalla neutra. Sin imágenes ni pantallas de la app.</p>
           <span id="scene-status" role="status">Preparando la planta 3D…</span>
           <div class="variant-disclosure">Arquitectura de referencia · Sin servicios conectados</div>
           <div class="note-actions">
@@ -53,6 +56,38 @@
           <h2 id="profiles-title">Perfiles del sistema</h2>
           <p>Canal, identidad, alcance y permisos propuestos para cada rol. Son perfiles ilustrativos, no usuarios reales ni una autenticación implementada.</p>
           <div id="profiles-grid"></div>
+        </div>
+      </section>
+      <section id="runtime-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="runtime-title" tabindex="-1">
+        <div class="arch-modal runtime-modal">
+          <button id="runtime-close" aria-label="Cerrar arquitectura de la animación">×</button>
+          <h2 id="runtime-title">Cómo funciona esta animación</h2>
+          <p>Esta es la arquitectura implementada de la presentación. Es distinta del diseño Microsoft propuesto en «Arquitectura 3D» y «Capas técnicas».</p>
+          <section class="runtime-section" aria-labelledby="deployment-title">
+            <h3 id="deployment-title">Del código a la publicación</h3>
+            <figure class="runtime-diagram">
+              <ol class="runtime-flow">
+                <li><strong>Código fuente</strong><span>HTML, CSS, módulos JavaScript y datos locales versionados en GitHub.</span></li>
+                <li><strong>GitHub Actions + Vite</strong><span>Instala dependencias, ejecuta las pruebas y compila la presentación.</span></li>
+                <li><strong>Archivos estáticos</strong><span>HTML y recursos con hash en <code>dist/</code>; sin servidor de aplicación.</span></li>
+                <li><strong>GitHub Pages</strong><span>Entrega los archivos por HTTPS al navegador del visitante.</span></li>
+              </ol>
+              <figcaption>Las flechas representan el proceso de publicación, no servicios ejecutándose en Azure.</figcaption>
+            </figure>
+          </section>
+          <section class="runtime-section" aria-labelledby="browser-title">
+            <h3 id="browser-title">Lo que sucede en tu navegador</h3>
+            <figure class="runtime-diagram">
+              <ol class="runtime-flow browser-flow">
+                <li><strong>Interacción</strong><span><code>main.js</code> coordina botones, vistas, perfiles, foco y diálogos.</span></li>
+                <li><strong>Escena y controles</strong><span><code>scene.js</code>, Three.js y OrbitControls: geometría procedural, cámara, personas y tablet neutra.</span></li>
+                <li><strong>Imagen 3D + etiquetas</strong><span>WebGL dibuja la planta en el canvas; CSS2DRenderer proyecta botones y etiquetas HTML sobre la escena.</span></li>
+              </ol>
+              <div class="runtime-data"><strong>Datos y contenido local</strong><p><code>data.js</code> alimenta los perfiles y las capas; <code>architecture-network.js</code> dibuja las conexiones ilustrativas. <code>ui.js</code> genera la documentación de la referencia.</p></div>
+              <figcaption>Todo se ejecuta en el dispositivo. Los controles de pausa y movimiento reducido detienen la animación sin ocultar la documentación.</figcaption>
+            </figure>
+          </section>
+          <div class="runtime-boundary"><h3>Qué está implementado y qué es una referencia</h3><p><strong>Implementado:</strong> planta 3D, operador con tablet sin contenido, navegación, perfiles y visualización de arquitectura.</p><p><strong>Solo propuesto:</strong> Entra, Container Apps, Foundry, Fabric, SAP y las demás integraciones de negocio. No hay backend, autenticación real, consultas de IA ni conexiones a esos sistemas.</p></div>
         </div>
       </section>
       <p id="app-error" role="alert" hidden></p>

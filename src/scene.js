@@ -6,8 +6,9 @@ import { buildStaticPlant } from "./plant.js";
 import { buildLivePlant } from "./plant-live.js";
 import { drawWalkways } from "./paths.js";
 import { makePerson, placeAt, updateActor } from "./people.js";
+import { buildArchitectureNetwork } from "./architecture-network.js";
 
-export function createPlantScene({ canvas, labelsMount, onProfile, onContextLost }) {
+export function createPlantScene({ canvas, labelsMount, onProfile, onLayer, onViewChange, onContextLost }) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.shadowMap.enabled = true;
@@ -53,7 +54,9 @@ export function createPlantScene({ canvas, labelsMount, onProfile, onContextLost
     parent.add(object);
     return object;
   }
-  for (const item of [...stat.labels, ...live.labels]) label(item.text, "plant-label", scene, item.pos);
+  const plantLabels = [...stat.labels, ...live.labels].map(item => label(item.text, "plant-label", scene, item.pos));
+  const personLabels = [];
+  const architecture = buildArchitectureNetwork(scene, label, onLayer);
   const actors = {
     brisa: makePerson(scene, { vest: 0xff6a13, helmet: 0xf6c400, ponytail: true }),
     juan: makePerson(scene, { vest: 0xff6a13, helmet: 0xf6c400, shirt: 0x5a4a3a }),
@@ -73,16 +76,18 @@ export function createPlantScene({ canvas, labelsMount, onProfile, onContextLost
     portero: [V3(6, 0, 89.8), V3(3.6, 1.4, 91.6)]
   };
   const names = {
-    brisa: ["Operación", "operador"], patricio: ["Coordinación", "coordinador"],
+    brisa: ["Operación · tablet", "operador"], patricio: ["Coordinación", "coordinador"],
     nurse: ["Enfermería", "enfermeria"], seguridad: ["Seguridad", "seguridad"],
     contratista: ["Contratista", "contratista"], portero: ["Portería", "porteria"]
   };
   for (const [id, actor] of Object.entries(actors)) {
     placeAt(actor, positions[id][0], positions[id][1]);
-    actor.tablet.visible = false;
+    actor.tablet.visible = id === "brisa";
+    actor.use = actor.useTarget = id === "brisa" ? 1 : 0;
+    updateActor(actor, 0);
     if (names[id]) {
       const [name, profile] = names[id];
-      label(name, `name-tag tag-${id}`, actor.group, V3(0, 3.35, 0), () => onProfile(profile));
+      personLabels.push(label(name, `name-tag tag-${id}`, actor.group, V3(0, 3.35, 0), () => onProfile(profile)));
     }
   }
 
@@ -96,10 +101,16 @@ export function createPlantScene({ canvas, labelsMount, onProfile, onContextLost
   let frameId;
   let lastFrame = 0;
   let time = 0;
+  let currentView = "operador";
+  let narrow = innerWidth < 650;
   const overviewTarget = V3(5, 0, 5);
   const overviewPosition = () => {
     const factor = innerWidth < 650 ? 1.8 : 1;
     return V3(95 * factor, 105 * factor, 160 * factor);
+  };
+  const architecturePosition = () => {
+    const factor = innerWidth < 650 ? 1.8 : 1;
+    return V3(0, 210 * factor, 310 * factor);
   };
   camera.position.copy(overviewPosition());
   controls.target.copy(overviewTarget);
@@ -114,11 +125,39 @@ export function createPlantScene({ canvas, labelsMount, onProfile, onContextLost
     }
     dirty = true;
   }
+  function showNetwork(visible) {
+    architecture.setVisible(visible);
+    for (const item of [...plantLabels, ...personLabels]) item.visible = !visible;
+    dirty = true;
+  }
+  function focusActor(id, immediate = false) {
+    const actor = actors[id];
+    if (!actor) throw new Error("No existe la ubicación de ese perfil.");
+    showNetwork(false);
+    stat.roofs.infirmary.visible = id !== "nurse";
+    stat.roofs.control.visible = id !== "seguridad";
+    const position = actor.group.getWorldPosition(V3());
+    const heading = actor.group.rotation.y;
+    const front = V3(Math.sin(heading), 0, Math.cos(heading));
+    const destination = position.clone().addScaledVector(front, 7).add(V3(-front.z * 3, 4.5, front.x * 3));
+    const target = position.clone().setY(position.y + 1.8);
+    if (immediate) {
+      tween = null;
+      camera.position.copy(destination);
+      controls.target.copy(target);
+      controls.update();
+    } else {
+      moveCamera(destination, target);
+    }
+    currentView = id === "brisa" ? "operador" : "planta";
+    onViewChange(currentView);
+  }
   const markDirty = () => { dirty = true; };
   const cancelTween = () => { tween = null; dirty = true; };
   controls.addEventListener("change", markDirty);
   controls.addEventListener("start", cancelTween);
   const resize = () => {
+    const nextNarrow = innerWidth < 650;
     camera.aspect = innerWidth / innerHeight;
     camera.fov = innerWidth < 650 ? 55 : 42;
     scene.fog.near = innerWidth < 650 ? 420 : 240;
@@ -126,6 +165,11 @@ export function createPlantScene({ canvas, labelsMount, onProfile, onContextLost
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);
     labelRenderer.setSize(innerWidth, innerHeight);
+    if (nextNarrow !== narrow) {
+      if (currentView === "arquitectura") moveCamera(architecturePosition(), V3(0, 28, 5));
+      else if (currentView === "planta") moveCamera(overviewPosition(), overviewTarget);
+    }
+    narrow = nextNarrow;
     dirty = true;
   };
   const onMotionChange = event => {
@@ -161,6 +205,7 @@ export function createPlantScene({ canvas, labelsMount, onProfile, onContextLost
       stat.flame.scale.setScalar(flicker);
       stat.flameLight.intensity = 30 * flicker;
       live.update(dt, time);
+      architecture.update(time);
       Object.values(actors).forEach(actor => updateActor(actor, dt));
       dirty = true;
     }
@@ -182,6 +227,7 @@ export function createPlantScene({ canvas, labelsMount, onProfile, onContextLost
     }
   }
   resize();
+  focusActor("brisa", true);
   renderer.render(scene, camera);
   labelRenderer.render(scene, camera);
   frameId = requestAnimationFrame(frame);
@@ -189,19 +235,20 @@ export function createPlantScene({ canvas, labelsMount, onProfile, onContextLost
     setPaused(value) { paused = value; dirty = true; },
     setMotionPaused(value) { motionPaused = value; dirty = true; },
     overview() {
+      showNetwork(false);
       stat.roofs.infirmary.visible = stat.roofs.control.visible = true;
       moveCamera(overviewPosition(), overviewTarget);
+      currentView = "planta";
+      onViewChange(currentView);
     },
-    locate(id) {
-      const actor = actors[id];
-      if (!actor) throw new Error("No existe la ubicación de ese perfil.");
-      stat.roofs.infirmary.visible = id !== "nurse";
-      stat.roofs.control.visible = id !== "seguridad";
-      const position = actor.group.getWorldPosition(V3());
-      const heading = actor.group.rotation.y;
-      const front = V3(Math.sin(heading), 0, Math.cos(heading));
-      moveCamera(position.clone().addScaledVector(front, 7).add(V3(-front.z * 3, 4.5, front.x * 3)), position.clone().setY(position.y + 1.8));
+    showArchitecture() {
+      showNetwork(true);
+      stat.roofs.infirmary.visible = stat.roofs.control.visible = true;
+      moveCamera(architecturePosition(), V3(0, 28, 5));
+      currentView = "arquitectura";
+      onViewChange(currentView);
     },
+    locate(id) { focusActor(id); },
     dispose() {
       running = false;
       cancelAnimationFrame(frameId);

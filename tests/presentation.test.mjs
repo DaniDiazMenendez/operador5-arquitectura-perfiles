@@ -5,6 +5,8 @@ import { readFile, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { LAYERS, PROFILES } from '../src/data.js';
 import { profilesOverlayHTML, archOverlayHTML } from '../src/ui.js';
+import * as THREE from 'three';
+import { buildArchitectureNetwork } from '../src/architecture-network.js';
 
 before(() => {
   execFileSync(process.execPath, ['node_modules/vite/bin/vite.js', 'build'], {
@@ -37,6 +39,31 @@ test('cada componente de un perfil navega a una capa de arquitectura existente',
       assert.ok(architecture.includes(component.name));
     }
   }
+});
+
+test('el mapa 3D conecta las capas, abre sus documentos y congela los flujos al ocultarse', () => {
+  const selected = [];
+  const actions = [];
+  const scene = new THREE.Scene();
+  const network = buildArchitectureNetwork(scene, (html, cls, parent, position, click) => {
+    const label = new THREE.Object3D();
+    label.position.copy(position);
+    label.element = { style: { setProperty() {} }, setAttribute() {}, dataset: {} };
+    parent.add(label);
+    actions.push(click);
+    return label;
+  }, id => selected.push(id));
+  actions.forEach(click => click());
+  assert.deepEqual(selected, LAYERS.map(layer => layer.id));
+  const pulse = scene.getObjectByName('pulse-canales-entrada');
+  const start = pulse.position.clone();
+  network.setVisible(true);
+  network.update(2);
+  assert.ok(pulse.position.distanceTo(start) > 1);
+  const frozen = pulse.position.clone();
+  network.setVisible(false);
+  network.update(10);
+  assert.ok(pulse.position.equals(frozen));
 });
 
 test('la publicación no contiene recursos ni rutas del recorrido retirado', async () => {
