@@ -4,42 +4,85 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0a0e17" />
-    <meta name="description" content="Planta Conectada: una planta industrial en 3D para explorar el trabajo del operador, los roles y permisos del equipo y su arquitectura de referencia con Microsoft Cloud, IA y datos." />
+    <meta name="description" content="Acompañá a Alex por una planta industrial 3D, gestioná tareas del turno y consultá a Nexo, su asistente de demostración. Incluye arquitectura de referencia Microsoft Cloud." />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <title>Planta Conectada · Arquitectura y perfiles</title>
+    <title>Planta Conectada · Operación y arquitectura</title>
   </head>
   <body>
     <div id="app">
       <div id="base">
-        <canvas id="scene" aria-hidden="true"></canvas>
+        <div id="plant-viewport"><canvas id="scene" aria-hidden="true"></canvas></div>
         <header id="topbar">
           <div class="brand">
             <span class="brand-mark" aria-hidden="true">PC</span>
             <div class="brand-text">
               <h1>Planta Conectada</h1>
-              <small>Arquitectura y perfiles · Microsoft Cloud</small>
+              <small>Operación, IA y arquitectura · Microsoft Cloud</small>
             </div>
           </div>
-          <nav class="top-actions" aria-label="Explorar la presentación">
-            <button id="btn-operator" aria-pressed="true" disabled>👷 Operador + tablet</button>
+          <button id="btn-motion" class="scene-motion" type="button" aria-label="Pausar animación" aria-pressed="false" disabled>Pausar</button>
+          <nav class="top-actions" aria-label="Explorar Planta Conectada">
+            <button id="btn-operator" aria-pressed="true" disabled>👷 Alex · Operador</button>
             <button id="btn-overview" aria-pressed="false" disabled>⤢ Planta</button>
             <button id="btn-spatial" aria-pressed="false" disabled>🛰️ Arquitectura 3D</button>
             <button id="btn-arch">🗺️ Capas técnicas</button>
-            <button id="btn-runtime">Cómo funciona</button>
+            <button id="btn-workspace" aria-controls="work-panel" aria-expanded="true">Tareas + Nexo</button>
             <button id="btn-profiles">👥 Perfiles</button>
           </nav>
         </header>
         <aside id="explore-note">
-          <strong id="view-title">Operador en planta, con su tablet.</strong>
-          <p id="view-description">Explorá los perfiles del equipo, sus permisos y la arquitectura Microsoft para digitalizar el trabajo en planta.</p>
+          <strong id="view-title">Alex en planta, con su tablet.</strong>
+          <p id="view-description">Elegí un sector para acompañar al operador, gestionar sus tareas y conversar con Nexo.</p>
           <span id="scene-status" role="status">Preparando la planta 3D…</span>
           <div class="variant-disclosure">Arquitectura de referencia · Sin servicios conectados</div>
           <div class="note-actions">
-            <button id="btn-motion" type="button" aria-pressed="false" disabled>Pausar animación</button>
             <a href="https://danidiazmenendez.github.io/catalogo-demos-ia-v2/" target="_blank" rel="noopener noreferrer">Volver al catálogo ↗</a>
           </div>
         </aside>
       </div>
+
+      <aside id="work-panel" aria-labelledby="work-title">
+        <header class="work-header">
+          <div><h2 id="work-title">Turno de Alex</h2><p id="work-location" role="status">Alex · Cinta 3</p></div>
+          <button id="work-close" type="button" aria-label="Cerrar tareas y chat">×</button>
+        </header>
+        <nav id="sector-list" aria-label="Sectores de la planta"></nav>
+        <div id="work-tabs" role="tablist" aria-label="Herramientas del operador">
+          <button id="tasks-tab" type="button" role="tab" aria-selected="true" aria-controls="tasks-panel">Tareas <span id="turn-progress"></span></button>
+          <button id="chat-tab" type="button" role="tab" aria-selected="false" aria-controls="chat-panel" tabindex="-1">Nexo · Chat</button>
+        </div>
+        <p id="work-warning" class="work-feedback" role="alert" hidden></p>
+        <p id="work-alert" class="work-feedback" role="alert" hidden></p>
+        <section id="tasks-panel" role="tabpanel" aria-labelledby="tasks-tab">
+          <button id="active-task-link" type="button" class="work-text-button" hidden></button>
+          <div id="task-list" aria-label="Tareas del sector"></div>
+          <article id="task-detail"></article>
+          <details class="notice-list"><summary>Avisos locales (<span id="notice-count">0</span>)</summary><p id="work-notices"></p></details>
+        </section>
+        <section id="chat-panel" role="tabpanel" aria-labelledby="chat-tab" hidden>
+          <p class="chat-disclosure">Nexo · Asistente en modo demostración. Respuestas locales, sin un modelo de IA conectado.</p>
+          <div id="chat-log" role="log" aria-label="Conversación con Nexo" aria-live="polite" aria-relevant="additions"></div>
+          <div class="chat-prompts" aria-label="Consultas de ejemplo">
+            <button type="button" data-ask="¿Qué tareas tengo pendientes?">Mis tareas</button>
+            <button type="button" data-ask="¿Qué dice la guía de este sector?">Consultar guía</button>
+            <button type="button" data-ask="¿Qué materiales hay disponibles?">Materiales</button>
+            <button type="button" data-ask="Preparar un aviso">Preparar aviso</button>
+            <button type="button" data-ask="Resumen del turno">Resumen del turno</button>
+          </div>
+          <form id="chat-form">
+            <label class="work-label" for="chat-input">Preguntale a Nexo</label>
+            <div class="chat-composer">
+              <textarea id="chat-input" rows="2" maxlength="800" required placeholder="Escribí tu consulta con datos ficticios…"></textarea>
+              <button type="submit" class="work-primary">Enviar</button>
+            </div>
+          </form>
+        </section>
+        <footer class="work-footer">
+          <p>Datos ficticios · Sin servicios conectados. El chat se reinicia al recargar.</p>
+          <div class="work-save-row"><span id="storage-status">Las tareas se guardan en este navegador</span><button id="reset-turn" type="button" class="work-text-button">Reiniciar turno</button></div>
+          <div id="reset-confirmation" hidden><p>Se borrarán los avances, avisos y mensajes de este turno de demostración.</p><button id="confirm-reset" type="button" class="work-primary">Reiniciar turno</button><button id="cancel-reset" type="button" class="work-text-button">Cancelar</button></div>
+        </footer>
+      </aside>
 
       <section id="arch-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="arch-title" tabindex="-1">
         <div class="arch-modal">
@@ -58,41 +101,9 @@
           <div id="profiles-grid"></div>
         </div>
       </section>
-      <section id="runtime-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="runtime-title" tabindex="-1">
-        <div class="arch-modal runtime-modal">
-          <button id="runtime-close" aria-label="Cerrar arquitectura de la animación">×</button>
-          <h2 id="runtime-title">Cómo funciona esta animación</h2>
-          <p>Esta es la arquitectura implementada de la presentación. Es distinta del diseño Microsoft propuesto en «Arquitectura 3D» y «Capas técnicas».</p>
-          <section class="runtime-section" aria-labelledby="deployment-title">
-            <h3 id="deployment-title">Del código a la publicación</h3>
-            <figure class="runtime-diagram">
-              <ol class="runtime-flow">
-                <li><strong>Código fuente</strong><span>HTML, CSS, módulos JavaScript y datos locales versionados en GitHub.</span></li>
-                <li><strong>GitHub Actions + Vite</strong><span>Instala dependencias, ejecuta las pruebas y compila la presentación.</span></li>
-                <li><strong>Archivos estáticos</strong><span>HTML y recursos con hash en <code>dist/</code>; sin servidor de aplicación.</span></li>
-                <li><strong>GitHub Pages</strong><span>Entrega los archivos por HTTPS al navegador del visitante.</span></li>
-              </ol>
-              <figcaption>Las flechas representan el proceso de publicación, no servicios ejecutándose en Azure.</figcaption>
-            </figure>
-          </section>
-          <section class="runtime-section" aria-labelledby="browser-title">
-            <h3 id="browser-title">Lo que sucede en tu navegador</h3>
-            <figure class="runtime-diagram">
-              <ol class="runtime-flow browser-flow">
-                <li><strong>Interacción</strong><span><code>main.js</code> coordina botones, vistas, perfiles, foco y diálogos.</span></li>
-                <li><strong>Escena y controles</strong><span><code>scene.js</code>, Three.js y OrbitControls: geometría procedural, cámara, personas y tablet neutra.</span></li>
-                <li><strong>Imagen 3D + etiquetas</strong><span>WebGL dibuja la planta en el canvas; CSS2DRenderer proyecta botones y etiquetas HTML sobre la escena.</span></li>
-              </ol>
-              <div class="runtime-data"><strong>Datos y contenido local</strong><p><code>data.js</code> alimenta los perfiles y las capas; <code>architecture-network.js</code> dibuja las conexiones ilustrativas. <code>ui.js</code> genera la documentación de la referencia.</p></div>
-              <figcaption>Todo se ejecuta en el dispositivo. Los controles de pausa y movimiento reducido detienen la animación sin ocultar la documentación.</figcaption>
-            </figure>
-          </section>
-          <div class="runtime-boundary"><h3>Qué está implementado y qué es una referencia</h3><p><strong>Implementado:</strong> planta 3D, operador con tablet sin contenido, navegación, perfiles y visualización de arquitectura.</p><p><strong>Solo propuesto:</strong> Entra, Container Apps, Foundry, Fabric, SAP y las demás integraciones de negocio. No hay backend, autenticación real, consultas de IA ni conexiones a esos sistemas.</p></div>
-        </div>
-      </section>
       <p id="app-error" role="alert" hidden></p>
     </div>
-    <noscript><p class="no-script">Activá JavaScript para explorar la arquitectura y los perfiles. Esta presentación no se conecta a servicios ni contiene datos de usuarios reales.</p></noscript>
+    <noscript><p class="no-script">Activá JavaScript para recorrer la planta, gestionar tareas, conversar con Nexo y explorar la arquitectura. La demo usa datos ficticios y no se conecta a servicios externos.</p></noscript>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

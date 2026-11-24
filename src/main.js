@@ -1,10 +1,14 @@
 import "./style.css";
 import "./variant.css";
+import "./workspace.css";
 import { LAYERS, PROFILES } from "./data.js";
 import { archOverlayHTML, profilesOverlayHTML } from "./ui.js";
+import { createWorkspace } from "./workspace.js";
 
 const $ = id => document.getElementById(id);
 let plant;
+let workspace;
+let sceneAvailable = false;
 let activeOverlay = null;
 let returnFocus;
 let motionPaused = false;
@@ -21,6 +25,7 @@ function closeOverlay({ restoreFocus = true } = {}) {
   $(activeOverlay).classList.add("hidden");
   activeOverlay = null;
   $("base").inert = false;
+  workspace?.setInert(false);
   plant?.setPaused(false);
   if (restoreFocus && returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
 }
@@ -31,6 +36,7 @@ function openOverlay(id, focusSelector) {
   activeOverlay = id;
   $(id).classList.remove("hidden");
   $("base").inert = true;
+  workspace?.setInert(true);
   plant?.setPaused(true);
   const target = focusSelector ? $(id).querySelector(focusSelector) : $(id).querySelector("button");
   if (!focusSelector) $(id).querySelector(".arch-modal").scrollTop = 0;
@@ -58,8 +64,8 @@ function openArchitecture(layerId = null) {
 
 function setView(mode) {
   const descriptions = {
-    operador: ["Operador en planta, con su tablet.", "Explorá los perfiles del equipo, sus permisos y la arquitectura Microsoft para digitalizar el trabajo en planta."],
-    planta: ["Una planta. Su arquitectura. Cada rol.", "Explorá la planta, los perfiles y sus permisos propuestos."],
+    operador: ["Alex en planta, con su tablet.", "Elegí un sector para acompañar al operador, gestionar sus tareas y conversar con Nexo."],
+    planta: ["Elegí un sector de la planta.", "Los puntos de Cinta 3, Ensacado, Despacho y Oficina abren las tareas del sector."],
     arquitectura: ["Arquitectura conectada sobre la planta.", "Flujos ilustrativos del diseño Microsoft. Tocá una capa para ver sus componentes."]
   };
   $("app").dataset.view = mode;
@@ -73,19 +79,18 @@ function setView(mode) {
 $("btn-profiles").addEventListener("click", () => openProfiles());
 $("btn-arch").addEventListener("click", () => openArchitecture());
 $("btn-overview").addEventListener("click", () => plant?.overview());
-$("btn-operator").addEventListener("click", () => plant?.locate("brisa"));
-$("btn-spatial").addEventListener("click", () => plant?.showArchitecture());
-$("btn-runtime").addEventListener("click", () => openOverlay("runtime-overlay"));
+$("btn-operator").addEventListener("click", () => { workspace.open(); plant?.locate("brisa"); });
+$("btn-spatial").addEventListener("click", () => { workspace.close(); plant?.showArchitecture(); });
 $("btn-motion").addEventListener("click", () => {
   motionPaused = !motionPaused;
   plant.setMotionPaused(motionPaused);
   $("btn-motion").setAttribute("aria-pressed", String(motionPaused));
-  $("btn-motion").textContent = motionPaused ? "Reanudar animación" : "Pausar animación";
+  $("btn-motion").textContent = motionPaused ? "Reanudar" : "Pausar";
+  $("btn-motion").setAttribute("aria-label", motionPaused ? "Reanudar animación" : "Pausar animación");
 });
 $("profiles-close").addEventListener("click", () => closeOverlay());
 $("arch-close").addEventListener("click", () => closeOverlay());
-$("runtime-close").addEventListener("click", () => closeOverlay());
-for (const id of ["arch-overlay", "profiles-overlay", "runtime-overlay"]) {
+for (const id of ["arch-overlay", "profiles-overlay"]) {
   $(id).addEventListener("click", event => {
     if (event.target === $(id)) closeOverlay();
   });
@@ -95,7 +100,7 @@ document.addEventListener("click", event => {
   if (layer) openArchitecture(layer.dataset.layer);
   const locate = event.target.closest("[data-locate]");
   if (locate) {
-    if (!plant) {
+    if (!sceneAvailable) {
       showError("La vista 3D no está disponible todavía. Podés seguir consultando la arquitectura y los perfiles.");
       return;
     }
@@ -123,38 +128,55 @@ document.addEventListener("keydown", event => {
 });
 
 const query = new URLSearchParams(location.search);
+workspace = createWorkspace({
+  onSectorChange: id => { if (sceneAvailable) plant.visitSector(id); },
+  onTaskCounts: counts => { if (sceneAvailable) plant.setTaskCounts(counts); },
+  onVisibilityChange: () => { if (sceneAvailable) plant.resize(); }
+});
+const toolbarObserver = new ResizeObserver(() => {
+  $("app").style.setProperty("--toolbar-height", `${Math.ceil($("topbar").getBoundingClientRect().height) + 6}px`);
+});
+toolbarObserver.observe($("topbar"));
 if (query.has("perfiles")) openProfiles(query.get("perfiles"));
 else if (query.has("arquitectura")) openArchitecture(query.get("arquitectura"));
-else if (query.has("tecnica")) openOverlay("runtime-overlay");
 
 import("./scene.js").then(({ createPlantScene }) => {
   plant = createPlantScene({
     canvas: $("scene"),
-    labelsMount: $("base"),
+    labelsMount: $("plant-viewport"),
     onProfile: openProfiles,
     onLayer: openArchitecture,
+    onSector: id => workspace.selectSector(id),
+    onArrival: id => workspace.onArrival(id),
     onViewChange: setView,
     onContextLost: () => {
-      $("scene-status").textContent = "La vista 3D perdió su contexto. Recargá para volver a intentar; arquitectura y perfiles siguen disponibles.";
+      sceneAvailable = false;
+      workspace.setSceneAvailable(false);
+      $("scene-status").textContent = "La vista 3D perdió su contexto. Tareas, Nexo, arquitectura y perfiles siguen disponibles.";
       $("btn-overview").disabled = true;
       $("btn-motion").disabled = true;
       $("btn-spatial").disabled = true;
       $("btn-operator").disabled = true;
     }
   });
+  sceneAvailable = true;
+  workspace.setSceneAvailable(true);
+  plant.visitSector(workspace.sectorId, { immediate: true });
   plant.setPaused(Boolean(activeOverlay));
   $("btn-motion").disabled = false;
   $("btn-spatial").disabled = false;
   $("btn-operator").disabled = false;
   $("btn-overview").disabled = false;
-  if (query.get("vista") === "arquitectura3d") plant.showArchitecture();
+  if (query.get("vista") === "arquitectura3d") { workspace.close(); plant.showArchitecture(); }
   else if (query.get("vista") === "planta") plant.overview();
-  $("scene-status").textContent = "Arrastrá para rotar · rueda para acercar · tocá un perfil para explorarlo.";
+  $("scene-status").textContent = "Arrastrá para rotar · acercá con la rueda · elegí un sector para recorrerlo.";
 }).catch(error => {
   console.error("No se pudo iniciar la planta 3D:", error);
-  $("scene-status").textContent = "3D no disponible en este dispositivo. La arquitectura y los perfiles siguen disponibles desde los botones superiores.";
+  sceneAvailable = false;
+  workspace.setSceneAvailable(false);
+  $("scene-status").textContent = "3D no disponible. Podés usar las tareas, Nexo, la arquitectura y los perfiles.";
   $("btn-overview").disabled = true;
 });
 
-window.addEventListener("pagehide", () => plant?.dispose());
+window.addEventListener("pagehide", () => { plant?.dispose(); toolbarObserver.disconnect(); });
 window.addEventListener("pageshow", event => { if (event.persisted) location.reload(); });

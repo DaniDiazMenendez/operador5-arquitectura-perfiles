@@ -16,6 +16,10 @@ export const NODES = {
   wInf: V3(24, 0, 60),
   infDoor: V3(24, 0, 65.5),
   infIn: V3(24, 0, 69.6),
+  wPacking: V3(59, 0, 60),
+  packing: V3(59, 0, 50),
+  wDispatch: V3(78, 0, 60),
+  dispatch: V3(78, 0, 68),
 };
 
 const EDGES = [
@@ -31,6 +35,10 @@ const EDGES = [
   ["wCross", "wInf"],
   ["wInf", "infDoor"],
   ["infDoor", "infIn"],
+  ["wInf", "wPacking"],
+  ["wPacking", "packing"],
+  ["wPacking", "wDispatch"],
+  ["wDispatch", "dispatch"],
 ];
 
 const adj = {};

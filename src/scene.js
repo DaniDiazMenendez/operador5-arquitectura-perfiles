@@ -4,11 +4,12 @@ import { CSS2DRenderer, CSS2DObject } from "three/examples/jsm/renderers/CSS2DRe
 import { V3, easeInOut } from "./helpers.js";
 import { buildStaticPlant } from "./plant.js";
 import { buildLivePlant } from "./plant-live.js";
-import { drawWalkways } from "./paths.js";
-import { makePerson, placeAt, updateActor } from "./people.js";
+import { drawWalkways, NODES, route } from "./paths.js";
+import { makePerson, placeAt, updateActor, walkPath } from "./people.js";
 import { buildArchitectureNetwork } from "./architecture-network.js";
+import { SECTORS, sectorById, OPERATOR } from "./operations.js";
 
-export function createPlantScene({ canvas, labelsMount, onProfile, onLayer, onViewChange, onContextLost }) {
+export function createPlantScene({ canvas, labelsMount, onProfile, onLayer, onSector, onArrival, onViewChange, onContextLost }) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.shadowMap.enabled = true;
@@ -54,7 +55,13 @@ export function createPlantScene({ canvas, labelsMount, onProfile, onLayer, onVi
     parent.add(object);
     return object;
   }
-  const plantLabels = [...stat.labels, ...live.labels].map(item => label(item.text, "plant-label", scene, item.pos));
+  const interactiveNames = new Set(["Cinta 3", "Ensacado y paletizado", "Despacho", "Oficina de turno"]);
+  const plantLabels = [...stat.labels, ...live.labels].filter(item => !interactiveNames.has(item.text)).map(item => label(item.text, "plant-label", scene, item.pos));
+  const sectorLabels = SECTORS.map(sector => {
+    const marker = label(`${sector.name}<small class="sector-count"></small>`, "sector-label", scene, NODES[sector.node].clone().setY(6), () => onSector(sector.id));
+    marker.element.dataset.sector = sector.id;
+    return marker;
+  });
   const personLabels = [];
   const architecture = buildArchitectureNetwork(scene, label, onLayer);
   const actors = {
@@ -67,7 +74,7 @@ export function createPlantScene({ canvas, labelsMount, onProfile, onLayer, onVi
     portero: makePerson(scene, { vest: 0x455a64, helmet: 0x263238, shirt: 0x263238, pants: 0x1b2230 })
   };
   const positions = {
-    brisa: [live.cinta3.at(.69, 4.4, 0), live.cinta3.secPoint],
+    brisa: [NODES.c3, V3(9.5, 1.5, 45)],
     juan: [V3(6.4, 0, 30.6), live.cinta3.secPoint],
     patricio: [V3(-23.6, 0, 64.6), V3(-20.2, 1.5, 64.2)],
     nurse: [V3(26.2, 0, 71), V3(23.2, 1.4, 71)],
@@ -76,7 +83,7 @@ export function createPlantScene({ canvas, labelsMount, onProfile, onLayer, onVi
     portero: [V3(6, 0, 89.8), V3(3.6, 1.4, 91.6)]
   };
   const names = {
-    brisa: ["Operación · tablet", "operador"], patricio: ["Coordinación", "coordinador"],
+    brisa: [`${OPERATOR} · tablet`, "operador"], patricio: ["Coordinación", "coordinador"],
     nurse: ["Enfermería", "enfermeria"], seguridad: ["Seguridad", "seguridad"],
     contratista: ["Contratista", "contratista"], portero: ["Portería", "porteria"]
   };
@@ -102,14 +109,17 @@ export function createPlantScene({ canvas, labelsMount, onProfile, onLayer, onVi
   let lastFrame = 0;
   let time = 0;
   let currentView = "operador";
-  let narrow = innerWidth < 650;
+  let narrow = labelsMount.clientWidth < 650;
+  let travelingTo = null;
+  let operatorSector = "cinta";
+  const sectorFaces = { cinta: V3(9.5, 1.5, 45), ensacado: V3(59, 1.5, 60), despacho: V3(78, 1.5, 78), oficina: V3(-22, 1.5, 60) };
   const overviewTarget = V3(5, 0, 5);
   const overviewPosition = () => {
-    const factor = innerWidth < 650 ? 1.8 : 1;
+    const factor = labelsMount.clientWidth < 650 ? 1.8 : 1;
     return V3(95 * factor, 105 * factor, 160 * factor);
   };
   const architecturePosition = () => {
-    const factor = innerWidth < 650 ? 1.8 : 1;
+    const factor = labelsMount.clientWidth < 650 ? 1.8 : 1;
     return V3(0, 210 * factor, 310 * factor);
   };
   camera.position.copy(overviewPosition());
@@ -127,7 +137,7 @@ export function createPlantScene({ canvas, labelsMount, onProfile, onLayer, onVi
   }
   function showNetwork(visible) {
     architecture.setVisible(visible);
-    for (const item of [...plantLabels, ...personLabels]) item.visible = !visible;
+    for (const item of [...plantLabels, ...personLabels, ...sectorLabels]) item.visible = !visible;
     dirty = true;
   }
   function focusActor(id, immediate = false) {
@@ -139,7 +149,13 @@ export function createPlantScene({ canvas, labelsMount, onProfile, onLayer, onVi
     const position = actor.group.getWorldPosition(V3());
     const heading = actor.group.rotation.y;
     const front = V3(Math.sin(heading), 0, Math.cos(heading));
-    const destination = position.clone().addScaledVector(front, 7).add(V3(-front.z * 3, 4.5, front.x * 3));
+    const framing = labelsMount.clientWidth < 650
+      ? { distance: 4.2, side: 1.6, height: 3.1 }
+      : id === "brisa" && operatorSector === "ensacado"
+        ? { distance: 12, side: 9, height: 13 }
+        : { distance: 7, side: 3, height: 4.5 };
+    const destination = position.clone().addScaledVector(front, framing.distance)
+      .add(V3(-front.z * framing.side, framing.height, front.x * framing.side));
     const target = position.clone().setY(position.y + 1.8);
     if (immediate) {
       tween = null;
@@ -157,21 +173,53 @@ export function createPlantScene({ canvas, labelsMount, onProfile, onLayer, onVi
   controls.addEventListener("change", markDirty);
   controls.addEventListener("start", cancelTween);
   const resize = () => {
-    const nextNarrow = innerWidth < 650;
-    camera.aspect = innerWidth / innerHeight;
-    camera.fov = innerWidth < 650 ? 55 : 42;
-    scene.fog.near = innerWidth < 650 ? 420 : 240;
-    scene.fog.far = innerWidth < 650 ? 1000 : 560;
+    const width = Math.max(1, labelsMount.clientWidth);
+    const height = Math.max(1, labelsMount.clientHeight);
+    const nextNarrow = width < 650;
+    camera.aspect = width / height;
+    camera.fov = nextNarrow ? 55 : 42;
+    scene.fog.near = nextNarrow ? 420 : 240;
+    scene.fog.far = nextNarrow ? 1000 : 560;
     camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight);
-    labelRenderer.setSize(innerWidth, innerHeight);
+    renderer.setSize(width, height);
+    labelRenderer.setSize(width, height);
     if (nextNarrow !== narrow) {
       if (currentView === "arquitectura") moveCamera(architecturePosition(), V3(0, 28, 5));
       else if (currentView === "planta") moveCamera(overviewPosition(), overviewTarget);
+      else if (currentView === "operador") focusActor("brisa", true);
     }
     narrow = nextNarrow;
     dirty = true;
   };
+  function arriveAtSector(id) {
+    const sector = sectorById(id);
+    const actor = actors.brisa;
+    placeAt(actor, NODES[sector.node], sectorFaces[id]);
+    actor.use = actor.useTarget = 1;
+    actor.legL.rotation.x = actor.legR.rotation.x = 0;
+    updateActor(actor, .25);
+    travelingTo = null;
+    dirty = true;
+    onArrival(id);
+  }
+  function visitSector(id, { immediate = false } = {}) {
+    const sector = sectorById(id);
+    operatorSector = id;
+    for (const marker of sectorLabels) marker.element.classList.toggle("is-current", marker.element.dataset.sector === id);
+    if (immediate || reduced || motionPaused || actors.brisa.group.position.distanceTo(NODES[sector.node]) < .3) {
+      arriveAtSector(id);
+      focusActor("brisa", true);
+      return;
+    }
+    const position = actors.brisa.group.position;
+    const nearest = Object.keys(NODES).reduce((closest, node) =>
+      NODES[node].distanceToSquared(position) < NODES[closest].distanceToSquared(position) ? node : closest);
+    const points = route(nearest, sector.node).map(node => NODES[node]);
+    travelingTo = id;
+    focusActor("brisa");
+    walkPath(actors.brisa, points, 18, () => arriveAtSector(id));
+    dirty = true;
+  }
   const onMotionChange = event => {
     reduced = event.matches;
     controls.enableDamping = !reduced;
@@ -180,11 +228,17 @@ export function createPlantScene({ canvas, labelsMount, onProfile, onLayer, onVi
       controls.target.copy(tween.endTarget);
       tween = null;
     }
+    if (reduced && travelingTo) {
+      arriveAtSector(travelingTo);
+      focusActor("brisa", true);
+    }
     dirty = true;
   };
   controls.enableDamping = !reduced;
   motion.addEventListener("change", onMotionChange);
   window.addEventListener("resize", resize);
+  const resizeObserver = new ResizeObserver(resize);
+  resizeObserver.observe(labelsMount);
   const onLost = event => {
     event.preventDefault();
     running = false;
@@ -206,7 +260,19 @@ export function createPlantScene({ canvas, labelsMount, onProfile, onLayer, onVi
       stat.flameLight.intensity = 30 * flicker;
       live.update(dt, time);
       architecture.update(time);
+      const previousPosition = actors.brisa.group.position.clone();
       Object.values(actors).forEach(actor => updateActor(actor, dt));
+      if (currentView === "operador") {
+        const delta = actors.brisa.group.position.clone().sub(previousPosition);
+        camera.position.add(delta);
+        controls.target.add(delta);
+        if (tween) {
+          tween.position.add(delta);
+          tween.endPosition.add(delta);
+          tween.target.add(delta);
+          tween.endTarget.add(delta);
+        }
+      }
       dirty = true;
     }
     if (!paused) {
@@ -234,6 +300,15 @@ export function createPlantScene({ canvas, labelsMount, onProfile, onLayer, onVi
   return {
     setPaused(value) { paused = value; dirty = true; },
     setMotionPaused(value) { motionPaused = value; dirty = true; },
+    resize,
+    visitSector,
+    setTaskCounts(counts) {
+      for (const marker of sectorLabels) {
+        const count = counts[marker.element.dataset.sector];
+        marker.element.querySelector(".sector-count").textContent = `${count} ${count === 1 ? "tarea pendiente" : "tareas pendientes"}`;
+      }
+      dirty = true;
+    },
     overview() {
       showNetwork(false);
       stat.roofs.infirmary.visible = stat.roofs.control.visible = true;
@@ -254,6 +329,7 @@ export function createPlantScene({ canvas, labelsMount, onProfile, onLayer, onVi
       cancelAnimationFrame(frameId);
       motion.removeEventListener("change", onMotionChange);
       window.removeEventListener("resize", resize);
+      resizeObserver.disconnect();
       canvas.removeEventListener("webglcontextlost", onLost);
       controls.removeEventListener("change", markDirty);
       controls.removeEventListener("start", cancelTween);

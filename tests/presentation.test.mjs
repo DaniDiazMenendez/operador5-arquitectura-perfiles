@@ -86,4 +86,7 @@ test('la publicación no contiene recursos ni rutas del recorrido retirado', asy
   const html = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
   assert.match(html, /lang="es"/);
   assert.match(html, /Sin servicios conectados/);
+  assert.doesNotMatch(html, /runtime-overlay|Cómo funciona esta animación|btn-runtime/);
+  assert.match(html, /Turno de Alex/);
+  assert.match(html, /Conversación con Nexo/);
 });
