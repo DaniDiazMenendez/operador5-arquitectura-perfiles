@@ -65,7 +65,7 @@ export function createPlantScene({ canvas, labelsMount, onProfile, onLayer, onSe
   const personLabels = [];
   const architecture = buildArchitectureNetwork(scene, label, onLayer);
   const actors = {
-    brisa: makePerson(scene, { vest: 0xff6a13, helmet: 0xf6c400, ponytail: true }),
+    brisa: makePerson(scene, { vest: 0xff6a13, helmet: 0xf6c400, ponytail: true, tabletSize: 1.25, tabletTilt: .25 }),
     juan: makePerson(scene, { vest: 0xff6a13, helmet: 0xf6c400, shirt: 0x5a4a3a }),
     patricio: makePerson(scene, { vest: 0x7cb342, helmet: 0xffffff, shirt: 0x2a5aa8 }),
     nurse: makePerson(scene, { vest: 0xffffff, helmet: 0xffffff, coat: true, pants: 0xdfe7ef }),

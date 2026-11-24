@@ -5,7 +5,7 @@ const SKIN = std(0xe2b08c, 0.8);
 
 // Avatar low-poly con casco, chaleco y tablet. Frente = +z local.
 export function makePerson(scene, opts) {
-  const { vest, helmet, pants = 0x2b3a55, shirt = 0x3b4a66, ponytail = false, coat = false, laptop = false, qr = false, tabletSize = 1 } = opts;
+  const { vest, helmet, pants = 0x2b3a55, shirt = 0x3b4a66, ponytail = false, coat = false, laptop = false, qr = false, tabletSize = 1, tabletTilt = 0.65 } = opts;
   const g = new THREE.Group();
   const body = new THREE.Group();
   g.add(body);
@@ -66,7 +66,7 @@ export function makePerson(scene, opts) {
 
   const actor = {
     group: g, legL, legR, armL, armR, tablet, screenMat,
-    walk: null, phase: 0, use: 0, useTarget: 0, face: null, heading: 0,
+    walk: null, phase: 0, use: 0, useTarget: 0, face: null, heading: 0, tabletTilt,
   };
   scene.add(g);
   return actor;
@@ -162,7 +162,7 @@ export function updateActor(a, dt) {
   const u = a.use;
   // Pose de la tablet: al costado (caminando) -> frente al pecho (usando)
   a.tablet.position.set(-0.45 * (1 - u), 1.0 + 0.4 * u, 0.05 + 0.37 * u);
-  a.tablet.rotation.set(0.65 * u, (Math.PI / 2) * (1 - u), 0);
+  a.tablet.rotation.set(a.tabletTilt * u, (Math.PI / 2) * (1 - u), 0);
   a.armL.rotation.x = -u * 0.95;
   a.armL.rotation.z = -0.1 * (1 - u) + 0.25 * u;
   a.armR.rotation.z = -0.25 * u;
